@@ -22,19 +22,21 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      issues: write
     outputs:
       release_created: ${{ steps.release.outputs.release_created }}
       tag_name: ${{ steps.release.outputs.tag_name }}
     steps:
       - id: release
-        uses: googleapis/release-please-action@16a9c90856f42705d54a6fda1823352bdc62cf38 # v4.4.0
+        uses: googleapis/release-please-action@8bb7a2ed0f90c9802c83129a9488d235a1f31a7c # main (2026-02-20, includes release-please 17.3.0 with force-tag-creation)
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
-  # TODO: uncomment ci-gate, publish-image, and publish-binaries when you're ready
-  # to ship artifacts on release. The ci-gate job is shared by all publish jobs —
-  # it waits for the CI workflow to pass before allowing any artifacts to ship.
+  # TODO: uncomment ci-gate, publish-image, publish-binaries, and publish-release
+  # when you're ready to ship artifacts on release. release-please creates draft
+  # releases (with tags via force-tag-creation) so assets can be uploaded before
+  # the release is published. The ci-gate job waits for CI to pass first.
   #
   # ci-gate:
   #   needs: release-please
@@ -133,3 +135,20 @@ jobs:
   #         checksum: sha256
   #         token: ${{ secrets.GITHUB_TOKEN }}
   #         ref: refs/tags/${{ needs.release-please.outputs.tag_name }}
+  #
+  # # Undraft the release after all artifacts (image + binaries) are uploaded.
+  # # release-please creates a draft so that immutable-release rules don't block
+  # # asset uploads; this job flips the draft flag once everything is in place.
+  # publish-release:
+  #   needs: [release-please, publish-image, publish-binaries]
+  #   runs-on: ubuntu-latest
+  #   permissions:
+  #     contents: write
+  #   steps:
+  #     - name: Publish GitHub release
+  #       env:
+  #         GH_TOKEN: ${{ github.token }}
+  #       run: |
+  #         gh release edit "${{ needs.release-please.outputs.tag_name }}" \
+  #           --draft=false \
+  #           --repo "${{ github.repository }}"
